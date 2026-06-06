@@ -1,0 +1,27 @@
+export const T = {
+  dark: false,
+  bg: "#F4F1EA",
+  panel: "#FBF9F4",
+  panel2: "#F0ECE1",
+  line: "rgba(64,52,30,0.10)",
+  line2: "rgba(64,52,30,0.17)",
+  text: "#2A2620",
+  sub: "#6F6A5C",
+  faint: "#A39C8B",
+  accent: "#C2613F",
+  gold: "#B27D27",
+  goldLite: "#C8923A",
+  goldText: "#8A6118",
+  up: "#1E9B57",
+  upText: "#16834A",
+  down: "#D23528",
+  tip: "#FFFFFF",
+  shadow: "0 14px 34px rgba(60,45,20,0.16)",
+  cardShadow: "0 1px 0 rgba(255,255,255,0.6) inset, 0 6px 20px rgba(70,55,25,0.05)",
+  glowA: "rgba(194,97,63,0.08)",
+  glowB: "rgba(178,125,39,0.10)",
+  upBg: "rgba(30,155,87,0.11)",
+  downBg: "rgba(210,53,40,0.10)",
+};
+
+export type Theme = typeof T;
