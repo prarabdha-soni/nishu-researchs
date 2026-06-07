@@ -113,7 +113,7 @@ export function TweaksPanel({ title = "Tweaks", children }: PanelProps) {
   return (
     <>
       <style>{STYLE}</style>
-      <div ref={dragRef} className="twk-panel" style={{ right: offsetRef.current.x, bottom: offsetRef.current.y }}>
+      <div ref={dragRef} className="twk-panel" style={{ right: PAD, bottom: PAD }}>
         <div className="twk-hd" onMouseDown={onDragStart}>
           <b>{title}</b>
           <button className="twk-x" onClick={() => { setOpen(false); window.parent.postMessage({ type: "__edit_mode_dismissed" }, "*"); }}>✕</button>

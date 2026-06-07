@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import type { Theme } from "../theme";
+import type { Scenario } from "../data";
 import { SCN } from "../data";
 import { Activity, Plus, Clock, Scissors } from "./Icons";
 
-interface Props { T: Theme & { accent: string }; }
+interface Props { T: Theme & { accent: string }; scenarios?: Scenario[]; }
 
 const ACT_ICON: Record<string, React.FC<{ size?: number }>> = { buy: Plus, wait: Clock, trim: Scissors };
 const ACT_KEY: Record<string, string> = { buy: "up", wait: "sub", trim: "down" };
@@ -19,9 +20,9 @@ function ActChip({ T, kind, act }: { T: Theme & { accent: string }; kind: string
   );
 }
 
-export default function ScenarioLab({ T }: Props) {
+export default function ScenarioLab({ T, scenarios = SCN }: Props) {
   const [sel, setSel] = useState<Record<string, number>>(() =>
-    Object.fromEntries(SCN.map((s) => [s.id, s.def]))
+    Object.fromEntries(scenarios.map((s) => [s.id, s.def]))
   );
 
   return (
@@ -34,7 +35,7 @@ export default function ScenarioLab({ T }: Props) {
       <div style={{ fontSize: 11.5, color: T.faint, marginBottom: 16 }}>Pick an outcome — see the agent's pre-committed response.</div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        {SCN.map((s) => {
+        {scenarios.map((s) => {
           const cur = s.opts[sel[s.id]];
           const moveColor = cur.kind === "trim" ? T.down : cur.kind === "wait" ? T.sub : T.up;
           return (

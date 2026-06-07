@@ -1,10 +1,11 @@
 import type { Theme } from "../theme";
+import type { LearnEntry } from "../data";
 import { LEARN } from "../data";
 import { Loop } from "./Icons";
 
-interface Props { T: Theme & { accent: string }; }
+interface Props { T: Theme & { accent: string }; entries?: LearnEntry[]; }
 
-export default function LearningLog({ T }: Props) {
+export default function LearningLog({ T, entries = LEARN }: Props) {
   return (
     <div className="au-card au-fade d5" style={{ padding: 20 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
@@ -16,7 +17,7 @@ export default function LearningLog({ T }: Props) {
       <div style={{ position: "relative" }}>
         <div style={{ position: "absolute", left: 5, top: 4, bottom: 4, width: 1.5, background: T.line }} />
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {LEARN.map((l, i) => (
+          {entries.map((l, i) => (
             <div key={i} style={{ position: "relative", paddingLeft: 22 }}>
               <span style={{ position: "absolute", left: 0, top: 4, width: 11, height: 11, borderRadius: 99,
                 background: T.panel, border: `2px solid ${i === 0 ? T.up : T.faint}` }} />

@@ -12,6 +12,13 @@ dist
 dist-ssr
 *.local
 
+# Env + agent state + TS build info
+.env
+.env.*
+!.env.example
+.data
+*.tsbuildinfo
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

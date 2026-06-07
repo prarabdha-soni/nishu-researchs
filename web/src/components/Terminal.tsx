@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { T as BASE_T } from "../theme";
 import {
-  priceSeries, events, monthTicks, catalysts, thesis,
-  DRIVER, STANCE, mFmt, dDay, fmt, fmt2, daysUntil,
+  priceSeries, events, catalysts, thesis,
+  DRIVER, STANCE, mFmt, dDay, fmt, fmt2, daysUntil, daysUntilFrom,
 } from "../data";
+import { useAgent } from "../api/useAgent";
 import { ICON_MAP, Target, Calendar, News, Loop, Plus, Scissors, Clock } from "./Icons";
 import GoldChart from "./GoldChart";
 import ReasoningStream from "./ReasoningStream";
@@ -27,64 +28,84 @@ const ACT_META: Record<string, { Icon: React.FC<{ size?: number }>; key: string 
   buy:  { Icon: Plus,     key: "up" },
   wait: { Icon: Clock,    key: "sub" },
   trim: { Icon: Scissors, key: "down" },
+  cut:  { Icon: Scissors, key: "down" },
 };
 
 interface Props { onReplayIntro?: () => void; }
 
 export default function Terminal({ onReplayIntro }: Props) {
   const [tw, setTweak] = useTweaks(TWEAK_DEFAULTS);
-  const [selId, setSelId] = useState("warsh");
-  const [livePx, setLivePx] = useState(5250);
-  const [ago, setAgo] = useState(2);
+  const { snapshot, livePrice } = useAgent();
+  const live = snapshot?.decision ?? null;
+
+  const [selId, setSelId] = useState<string | null>(null);
+  const [ago, setAgo] = useState(0);
   const [briefOpen, setBriefOpen] = useState(false);
 
   const T = { ...BASE_T, accent: tw.accent || BASE_T.accent };
-  const dc = (k: string) => DRIVER[k]?.cL ?? "#888";
+  const dc = (k: string) => DRIVER[k as keyof typeof DRIVER]?.cL ?? "#888";
+  const now = new Date();
 
-  useEffect(() => {
-    const base0 = 5250;
-    const id = setInterval(() => {
-      setLivePx(Math.round((base0 + (Math.random() - 0.5) * 13) * 100) / 100);
-      setAgo(0);
-    }, 2400);
-    return () => clearInterval(id);
-  }, []);
+  // Reset the "synced ago" counter whenever a fresh live price lands.
+  useEffect(() => { setAgo(0); }, [livePrice?.asOf]);
   useEffect(() => {
     const id = setInterval(() => setAgo((a) => a + 1), 1000);
     return () => clearInterval(id);
   }, []);
 
-  const sel = events.find((e) => e.id === selId)!;
-  const dr = DRIVER[sel.driver];
-  const drC = dc(sel.driver);
-  const DrIcon = ICON_MAP[dr.icon];
+  // Live data with seed fallbacks — the cockpit always renders.
+  const source = livePrice?.source ?? snapshot?.source ?? "seed";
+  const series = snapshot?.market.history ?? priceSeries;
+  const evs = snapshot?.events ?? events;
+  const cats = snapshot?.catalysts ?? catalysts;
 
-  const st = STANCE[tw.stance] || STANCE.Bullish;
+  const last = series[series.length - 1]?.price ?? 0;
+  const prev = series[series.length - 2]?.price ?? last;
+  const displayPx = livePrice?.price ?? snapshot?.market.price ?? last;
+  const dayChgNum = livePrice?.changePct1d ?? snapshot?.market.changePct1d ?? (prev ? ((last - prev) / prev) * 100 : 0);
+  const dayChg = dayChgNum.toFixed(2);
+
+  // Month ticks derived from whatever series is in play (live or seed).
+  const ticks = (() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const p of series) { const k = p.date.slice(0, 7); if (!seen.has(k)) { seen.add(k); out.push(p.date); } }
+    return out;
+  })();
+
+  const stanceKey = live ? live.stance : tw.stance;
+  const st = STANCE[stanceKey as keyof typeof STANCE] || STANCE.Bullish;
   const stCol = T[st.col as keyof typeof T] as string;
   const stTxt = T[st.txt as keyof typeof T] as string;
-  const target   = tw.target;
-  const dipLevel = tw.dipLevel;
-  const buyZone: [number, number] = [dipLevel - 100, dipLevel + 50];
+  const conviction = live ? live.conviction : tw.conviction;
+  const target = live ? live.target : tw.target;
+  const dipLevel = live ? live.dipLevel : tw.dipLevel;
+  const addSize = live ? (live.ladder[0]?.size ?? tw.addSize) : tw.addSize;
+  const invalid = live ? live.invalidation : 4900;
+  const trimZone = live ? live.trimZone : 5750;
+  const buyZone: [number, number] = live ? live.buyZone : [dipLevel - 100, dipLevel + 50];
+  const thesisLineText = live ? live.thesisLine : thesis.line;
+  const upsideNum = live ? live.upsidePct : (last ? ((target - last) / last) * 100 : 0);
+  const upside = upsideNum.toFixed(1);
+  const rr = (live ? live.rewardRisk : (target - dipLevel) / Math.max(1, dipLevel - invalid)).toFixed(1);
+  const floor = snapshot?.market.low52 ?? 4946;
+  const avgEntry = live ? live.avgEntry : 5180;
+  const dUntil = (d: string) => (snapshot ? daysUntilFrom(d, now) : daysUntil(d));
 
-  const last  = priceSeries[priceSeries.length - 1].price;
-  const prev  = priceSeries[priceSeries.length - 2].price;
-  const dayChg = (((last - prev) / prev) * 100).toFixed(2);
-  const upside  = (((target - last) / last) * 100).toFixed(1);
+  const ladder = live
+    ? live.ladder
+    : [
+        { px: dipLevel,       size: tw.addSize,                   tag: "Primary dip-add · armed" },
+        { px: dipLevel - 100, size: Math.max(5, tw.addSize - 5),  tag: "Second rung" },
+        { px: dipLevel - 200, size: Math.max(5, tw.addSize - 10), tag: "Capitulation rung" },
+      ];
+  const book = (live ? live.book : [
+    { k: "Core long", w: 55, key: "up" },
+    { k: "Tactical dry powder", w: 35, key: "gold" },
+    { k: "Tail hedge", w: 10, key: "faint" },
+  ]).map((b) => ({ k: b.k, w: b.w, c: T[b.key as keyof typeof T] as string }));
 
-  const invalid = 4900;
-  const rr = ((target - dipLevel) / Math.max(1, dipLevel - invalid)).toFixed(1);
-
-  const ladder = [
-    { px: dipLevel,       size: tw.addSize,                   tag: "Primary dip-add · armed" },
-    { px: dipLevel - 100, size: Math.max(5, tw.addSize - 5),  tag: "Second rung" },
-    { px: dipLevel - 200, size: Math.max(5, tw.addSize - 10), tag: "Capitulation rung" },
-  ];
-  const book = [
-    { k: "Core long",          w: 55, c: T.up },
-    { k: "Tactical dry powder",w: 35, c: T.gold },
-    { k: "Tail hedge",         w: 10, c: T.faint },
-  ];
-  const playbook = [
+  const playbook = live ? live.playbook : [
     { id: "t1", primary: true, act: "ADD",  kind: "buy",  size: `+${tw.addSize}%`,
       when: `Dip into $${fmt(dipLevel)} after the Jun 10 CPI`,
       note: "Primary dip-add. Crowded shorts into a structural bid = an asymmetric squeeze; stagger fills across the ladder rungs." },
@@ -97,16 +118,22 @@ export default function Terminal({ onReplayIntro }: Props) {
     { id: "t4", act: "TRIM", kind: "trim", size: "−10%",
       when: "Rip above $5,750 with no new official buyers",
       note: `Bank gains into thin demand; core stays on for the $${fmt(target)} target.` },
-    { id: "t5", act: "CUT",  kind: "trim", size: "→ 30%",
+    { id: "t5", act: "CUT",  kind: "cut",  size: "→ 30%",
       when: `Daily close below $${fmt(invalid)}`,
       note: "Thesis invalidation. De-risk to a core hold and reassess the regime." },
   ];
-  const rails = [
-    { k: "Invalidation",  v: `< $${fmt(invalid)}`,  note: "cut to 30% core",          tone: T.down },
-    { k: "Trim zone",     v: "$5,750",               note: "take 10% off",             tone: T.sub },
-    { k: "12-mo target",  v: `$${fmt(target)}`,      note: `+${upside}% upside`,       tone: T.up },
-    { k: "Reward : risk", v: `${rr} : 1`,            note: "on the dip-add",           tone: T.up },
-  ];
+  const rails = (live ? live.rails : [
+    { k: "Invalidation",  v: `< $${fmt(invalid)}`, note: "cut to 30% core", tone: "down" },
+    { k: "Trim zone",     v: `$${fmt(trimZone)}`,  note: "take 10% off",    tone: "sub" },
+    { k: "12-mo target",  v: `$${fmt(target)}`,    note: `+${upside}% upside`, tone: "up" },
+    { k: "Reward : risk", v: `${rr} : 1`,          note: "on the dip-add",  tone: "up" },
+  ]).map((r) => ({ k: r.k, v: r.v, note: r.note, tone: T[r.tone as keyof typeof T] as string }));
+
+  const sel = evs.find((e) => e.id === selId) ?? evs[0] ?? null;
+  const dr = sel ? DRIVER[sel.driver] : null;
+  const drC = sel ? dc(sel.driver) : "#888";
+  const DrIcon = dr ? ICON_MAP[dr.icon] : null;
+  const nextCat = cats[0];
 
   const actChip = (kind: string, act: string, size?: string | null) => {
     const meta = ACT_META[kind] || ACT_META.wait;
@@ -203,15 +230,15 @@ export default function Terminal({ onReplayIntro }: Props) {
           <div style={{ display: "flex", alignItems: "flex-end", gap: 14 }}>
             <div style={{ textAlign: "right" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
-                <span style={{ width: 7, height: 7, borderRadius: 99, background: T.up }} className="au-live" />
+                <span style={{ width: 7, height: 7, borderRadius: 99, background: source === "live" ? T.up : T.faint }} className={source === "live" ? "au-live" : undefined} />
                 <span className="au-mono" style={{ fontSize: 30, fontWeight: 600, color: T.goldText, lineHeight: 1 }}>
-                  ${fmt2(livePx)}
+                  ${fmt2(displayPx)}
                 </span>
               </div>
               <div className="au-mono" style={{ fontSize: 12.5, marginTop: 5 }}>
                 <span style={{ color: Number(dayChg) >= 0 ? T.up : T.down }}>{Number(dayChg) >= 0 ? "+" : ""}{dayChg}% 1d</span>
                 <span style={{ color: T.faint }}>{"  ·  "}</span>
-                <span style={{ color: T.faint }}>synced {ago}s ago</span>
+                <span style={{ color: T.faint }}>{source === "live" ? `live · ${ago}s ago` : "sample data"}</span>
               </div>
             </div>
             <button className="au-tgl au-cta" onClick={() => setBriefOpen(true)}>
@@ -231,15 +258,15 @@ export default function Terminal({ onReplayIntro }: Props) {
               <span style={{ width: 11, height: 11, borderRadius: 99, background: stCol, boxShadow: `0 0 0 4px ${stCol}26` }} />
               <span style={{ fontFamily: "'Newsreader',Georgia,serif", fontWeight: 500, letterSpacing: ".1px", fontSize: 29, lineHeight: 1.05, color: stTxt }}>{st.label}</span>
             </div>
-            <p style={{ fontSize: 14, color: T.sub, lineHeight: 1.6, marginTop: 13, maxWidth: 520 }}>{thesis.line}</p>
+            <p style={{ fontSize: 14, color: T.sub, lineHeight: 1.6, marginTop: 13, maxWidth: 520 }}>{thesisLineText}</p>
 
             <div style={{ marginTop: 18, maxWidth: 440 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 7 }}>
                 <span className="au-kicker">Conviction</span>
-                <span className="au-mono" style={{ fontSize: 13, color: stTxt, fontWeight: 600 }}>{(tw.conviction / 10).toFixed(1)} / 10</span>
+                <span className="au-mono" style={{ fontSize: 13, color: stTxt, fontWeight: 600 }}>{(conviction / 10).toFixed(1)} / 10</span>
               </div>
               <div className="au-bar" style={{ height: 9 }}>
-                <div style={{ width: tw.conviction + "%", height: "100%", background: `linear-gradient(90deg, ${T.gold}, ${stCol})`, borderRadius: 6 }} />
+                <div style={{ width: conviction + "%", height: "100%", background: `linear-gradient(90deg, ${T.gold}, ${stCol})`, borderRadius: 6 }} />
               </div>
             </div>
 
@@ -250,20 +277,22 @@ export default function Terminal({ onReplayIntro }: Props) {
                   <span className="au-kicker" style={{ color: T.upText }}>Next move</span>
                   {actChip("buy", "WAITING TO BUY", null)}
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 13 }}>
-                  <div style={{ textAlign: "center", border: `1px solid ${T.gold}`, borderRadius: 12, padding: "6px 0 7px", minWidth: 66, background: T.panel, boxShadow: `0 0 0 4px ${T.glowB}` }}>
-                    <div className="au-mono" style={{ fontSize: 9.5, letterSpacing: 1.5, color: T.goldText, fontWeight: 600 }}>{mFmt(catalysts[0].date).toUpperCase()}</div>
-                    <div style={{ fontFamily: "'Newsreader',Georgia,serif", fontWeight: 500, fontSize: 27, lineHeight: 1, color: T.goldText }}>{dDay(catalysts[0].date)}</div>
-                    <div className="au-mono" style={{ fontSize: 9, color: T.accent, fontWeight: 600, marginTop: 2 }}>in {daysUntil(catalysts[0].date)} days</div>
-                  </div>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 600 }}>{catalysts[0].label}</div>
-                    <div style={{ fontSize: 12.5, lineHeight: 1.5, color: T.sub, marginTop: 3 }}>
-                      Add <b className="au-mono" style={{ color: T.upText }}>+{tw.addSize}%</b> on <b>any dip below ${fmt(dipLevel)}</b>.
+                {nextCat && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 13 }}>
+                    <div style={{ textAlign: "center", border: `1px solid ${T.gold}`, borderRadius: 12, padding: "6px 0 7px", minWidth: 66, background: T.panel, boxShadow: `0 0 0 4px ${T.glowB}` }}>
+                      <div className="au-mono" style={{ fontSize: 9.5, letterSpacing: 1.5, color: T.goldText, fontWeight: 600 }}>{mFmt(nextCat.date).toUpperCase()}</div>
+                      <div style={{ fontFamily: "'Newsreader',Georgia,serif", fontWeight: 500, fontSize: 27, lineHeight: 1, color: T.goldText }}>{dDay(nextCat.date)}</div>
+                      <div className="au-mono" style={{ fontSize: 9, color: T.accent, fontWeight: 600, marginTop: 2 }}>in {dUntil(nextCat.date)} days</div>
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 600 }}>{nextCat.label}</div>
+                      <div style={{ fontSize: 12.5, lineHeight: 1.5, color: T.sub, marginTop: 3 }}>
+                        Add <b className="au-mono" style={{ color: T.upText }}>+{addSize}%</b> on <b>any dip below ${fmt(dipLevel)}</b>.
+                      </div>
                     </div>
                   </div>
-                </div>
-                <EvidenceChain T={T} />
+                )}
+                <EvidenceChain T={T} signals={live?.signals} confidencePct={live?.confidencePct} />
               </div>
             </div>
           </div>
@@ -281,10 +310,10 @@ export default function Terminal({ onReplayIntro }: Props) {
               </div>
               <div style={{ marginTop: 12 }}>
                 <div className="au-bar">
-                  <div style={{ width: Math.max(2, Math.min(100, (last - 4946) / (target - 4946) * 100)) + "%", height: "100%", background: T.gold, borderRadius: 6 }} />
+                  <div style={{ width: Math.max(2, Math.min(100, (last - floor) / Math.max(1, target - floor) * 100)) + "%", height: "100%", background: T.gold, borderRadius: 6 }} />
                 </div>
                 <div className="au-mono" style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, color: T.faint, marginTop: 5 }}>
-                  <span>now ${fmt(last)}</span><span>${fmt(target)}</span>
+                  <span>now ${fmt(Math.round(last))}</span><span>${fmt(target)}</span>
                 </div>
               </div>
             </div>
@@ -295,12 +324,12 @@ export default function Terminal({ onReplayIntro }: Props) {
                 <Calendar size={14} style={{ color: T.accent }} />
                 <span className="au-kicker">Upcoming catalysts</span>
               </div>
-              {catalysts.map((c, i) => {
+              {cats.map((c, i) => {
                 const col = dc(c.tag);
-                const dys = daysUntil(c.date);
+                const dys = dUntil(c.date);
                 const next = i === 0;
                 return (
-                  <div key={c.date} style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 0", borderTop: i ? `1px solid ${T.line}` : "none" }}>
+                  <div key={c.id ?? c.date} style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 0", borderTop: i ? `1px solid ${T.line}` : "none" }}>
                     <div style={{ textAlign: "center", minWidth: 38 }}>
                       <div className="au-mono" style={{ fontSize: 9, letterSpacing: 1, color: T.faint, fontWeight: 600 }}>{mFmt(c.date).toUpperCase()}</div>
                       <div style={{ fontFamily: "'Newsreader',Georgia,serif", fontWeight: 500, fontSize: 18, lineHeight: 1, color: next ? T.goldText : T.text }}>{dDay(c.date)}</div>
@@ -324,8 +353,14 @@ export default function Terminal({ onReplayIntro }: Props) {
         <div className="au-card au-fade d3" style={{ padding: "18px 18px 10px", marginTop: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 10, marginBottom: 6 }}>
             <div>
-              <div style={{ fontFamily: "'Newsreader',Georgia,serif", fontWeight: 500, letterSpacing: ".1px", fontSize: 18 }}>How Nishu traded 2026</div>
-              <div style={{ fontSize: 11.5, color: T.faint, marginTop: 2 }}>Every macro shock was an entry. Tap a marker to see the trade.</div>
+              <div style={{ fontFamily: "'Newsreader',Georgia,serif", fontWeight: 500, letterSpacing: ".1px", fontSize: 18 }}>
+                {snapshot ? "How Nishu is trading gold" : "How Nishu traded 2026"}
+              </div>
+              <div style={{ fontSize: 11.5, color: T.faint, marginTop: 2 }}>
+                {snapshot
+                  ? `Live ${snapshot.market.symbol} via Yahoo Finance · markers are catalysts the agent has learned from.`
+                  : "Every macro shock was an entry. Tap a marker to see the trade."}
+              </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 13 }}>
               <span style={{ fontSize: 11, color: T.sub, display: "flex", alignItems: "center", gap: 6 }}>
@@ -338,51 +373,55 @@ export default function Terminal({ onReplayIntro }: Props) {
           </div>
 
           <GoldChart
-            data={priceSeries} events={events} selId={selId} onSelect={setSelId}
-            T={T} driverColor={dc} monthTicks={monthTicks} zone={buyZone}
+            data={series} events={evs} selId={sel?.id ?? ""} onSelect={setSelId}
+            T={T} driverColor={dc} monthTicks={ticks} zone={buyZone}
           />
 
-          <div className="au-rail" style={{ marginTop: 4 }}>
-            {events.map((ev) => {
-              const on = ev.id === selId;
-              const c = dc(ev.driver);
-              const EvIcon = ICON_MAP[DRIVER[ev.driver].icon];
-              return (
-                <div key={ev.id} className={"au-chip" + (on ? " on" : "")} style={{ color: c }} onClick={() => setSelId(ev.id)}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <EvIcon size={13} />
-                    <span className="au-mono" style={{ fontSize: 10.5, color: T.faint }}>{mFmt(ev.date)} {dDay(ev.date)}</span>
+          {evs.length > 0 && (
+            <div className="au-rail" style={{ marginTop: 4 }}>
+              {evs.map((ev) => {
+                const on = ev.id === sel?.id;
+                const c = dc(ev.driver);
+                const EvIcon = ICON_MAP[DRIVER[ev.driver].icon];
+                return (
+                  <div key={ev.id} className={"au-chip" + (on ? " on" : "")} style={{ color: c }} onClick={() => setSelId(ev.id)}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <EvIcon size={13} />
+                      <span className="au-mono" style={{ fontSize: 10.5, color: T.faint }}>{mFmt(ev.date)} {dDay(ev.date)}</span>
+                    </div>
+                    <div style={{ color: T.text, fontSize: 12, fontWeight: 600, marginTop: 4, whiteSpace: "nowrap" }}>{ev.label}</div>
+                    <div className="au-mono" style={{ fontSize: 11.5, marginTop: 3, color: ev.move >= 0 ? T.up : T.down }}>
+                      {ev.move >= 0 ? "+" : ""}{ev.move}%
+                    </div>
                   </div>
-                  <div style={{ color: T.text, fontSize: 12, fontWeight: 600, marginTop: 4, whiteSpace: "nowrap" }}>{ev.label}</div>
-                  <div className="au-mono" style={{ fontSize: 11.5, marginTop: 3, color: ev.move >= 0 ? T.up : T.down }}>
-                    {ev.move >= 0 ? "+" : ""}{ev.move}%
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Selected trade read */}
-          <div key={sel.id} className="au-fade" style={{ marginTop: 6, borderTop: `1px solid ${T.line}`, paddingTop: 13, display: "flex", gap: 14, flexWrap: "wrap", alignItems: "flex-start" }}>
-            <div style={{ minWidth: 200, flex: 1 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 10.5, padding: "2px 8px", borderRadius: 99, background: drC + "22", color: drC, display: "inline-flex", alignItems: "center", gap: 5, fontWeight: 600 }}>
-                  <DrIcon size={11} /> {dr.label}
-                </span>
-                <span style={{ fontFamily: "'Newsreader',Georgia,serif", fontWeight: 500, letterSpacing: ".1px", fontSize: 16 }}>{sel.label}</span>
-                <span className="au-mono" style={{ fontSize: 14, fontWeight: 600, color: sel.move >= 0 ? T.up : T.down }}>{sel.move >= 0 ? "+" : ""}{sel.move}%</span>
+          {sel && dr && DrIcon && (
+            <div key={sel.id} className="au-fade" style={{ marginTop: 6, borderTop: `1px solid ${T.line}`, paddingTop: 13, display: "flex", gap: 14, flexWrap: "wrap", alignItems: "flex-start" }}>
+              <div style={{ minWidth: 200, flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 10.5, padding: "2px 8px", borderRadius: 99, background: drC + "22", color: drC, display: "inline-flex", alignItems: "center", gap: 5, fontWeight: 600 }}>
+                    <DrIcon size={11} /> {dr.label}
+                  </span>
+                  <span style={{ fontFamily: "'Newsreader',Georgia,serif", fontWeight: 500, letterSpacing: ".1px", fontSize: 16 }}>{sel.label}</span>
+                  <span className="au-mono" style={{ fontSize: 14, fontWeight: 600, color: sel.move >= 0 ? T.up : T.down }}>{sel.move >= 0 ? "+" : ""}{sel.move}%</span>
+                </div>
+                <p style={{ fontSize: 12.5, color: T.sub, lineHeight: 1.55, marginTop: 7, maxWidth: 560 }}>{sel.summary}</p>
               </div>
-              <p style={{ fontSize: 12.5, color: T.sub, lineHeight: 1.55, marginTop: 7, maxWidth: 560 }}>{sel.summary}</p>
-            </div>
-            <div style={{ minWidth: 200, flex: 1, border: `1px solid ${T.up}44`, background: T.upBg, borderRadius: 11, padding: "11px 13px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ display: "inline-flex", width: 22, height: 22, borderRadius: 7, alignItems: "center", justifyContent: "center", background: T.up + "26", color: T.up }}><Plus size={13} /></span>
-                <span className="au-kicker" style={{ color: T.upText }}>What Nishu did</span>
+              <div style={{ minWidth: 200, flex: 1, border: `1px solid ${T.up}44`, background: T.upBg, borderRadius: 11, padding: "11px 13px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ display: "inline-flex", width: 22, height: 22, borderRadius: 7, alignItems: "center", justifyContent: "center", background: T.up + "26", color: T.up }}><Plus size={13} /></span>
+                  <span className="au-kicker" style={{ color: T.upText }}>What Nishu did</span>
+                </div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: T.upText, marginTop: 7 }}>{sel.acted}</div>
+                <div style={{ fontSize: 12, color: T.sub, lineHeight: 1.5, marginTop: 4 }}>{sel.detail}</div>
               </div>
-              <div style={{ fontSize: 13.5, fontWeight: 700, color: T.upText, marginTop: 7 }}>{sel.acted}</div>
-              <div style={{ fontSize: 12, color: T.sub, lineHeight: 1.5, marginTop: 4 }}>{sel.detail}</div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Playbook header */}
@@ -398,7 +437,7 @@ export default function Terminal({ onReplayIntro }: Props) {
             <div className="au-kicker" style={{ marginBottom: 10 }}>Positioning</div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
               <span style={{ fontFamily: "'Newsreader',Georgia,serif", fontWeight: 500, letterSpacing: ".1px", fontSize: 20, color: T.upText }}>Net long</span>
-              <span className="au-mono" style={{ fontSize: 12.5, color: T.sub }}>avg entry ${fmt(5180)}</span>
+              <span className="au-mono" style={{ fontSize: 12.5, color: T.sub }}>avg entry ${fmt(avgEntry)}</span>
             </div>
             <div style={{ display: "flex", height: 11, borderRadius: 6, overflow: "hidden", marginTop: 12, gap: 2 }}>
               {book.map((b) => <div key={b.k} style={{ width: b.w + "%", background: b.c }} />)}
@@ -468,18 +507,26 @@ export default function Terminal({ onReplayIntro }: Props) {
         </div>
 
         {/* Track record */}
-        <Scorecard T={T} />
+        <Scorecard T={T} track={snapshot?.state.track} />
 
         {/* Learning + Scenario lab */}
         <div className="au-lower2" style={{ alignItems: "start" }}>
-          <LearningLog T={T} />
-          <ScenarioLab T={T} />
+          <LearningLog T={T} entries={snapshot?.state.journal} />
+          <ScenarioLab T={T} scenarios={live?.scenarios} />
         </div>
 
         {/* Footer */}
         <div style={{ fontSize: 11, color: T.faint, marginTop: 18, lineHeight: 1.55 }}>
-          Confirmed anchor: Jan-29 intraday ATH <span className="au-mono">$5,594.82</span> → session low <span className="au-mono">$5,109.62</span>.
-          Targets, orders and levels are illustrative — wire the live schema in where these arrays sit. Nishu advises on scenarios; it does not guarantee outcomes. Not financial advice.
+          {snapshot ? (
+            <>
+              Live gold via Yahoo Finance (<span className="au-mono">{snapshot.market.symbol}</span>). Stance, levels and orders are model-derived from real price action and update as catalysts resolve. Nishu advises on scenarios; it does not guarantee outcomes. Not financial advice.
+            </>
+          ) : (
+            <>
+              Confirmed anchor: Jan-29 intraday ATH <span className="au-mono">$5,594.82</span> → session low <span className="au-mono">$5,109.62</span>.
+              Sample data — start the agent server to go live. Nishu advises on scenarios; it does not guarantee outcomes. Not financial advice.
+            </>
+          )}
           {onReplayIntro && (
             <button onClick={onReplayIntro} style={{ marginLeft: 6, background: "none", border: "none", color: T.accent, cursor: "pointer", fontFamily: "inherit", fontSize: 11, textDecoration: "underline", padding: 0 }}>Replay intro</button>
           )}
@@ -493,7 +540,7 @@ export default function Terminal({ onReplayIntro }: Props) {
           options={["#C2613F", "#2A6FDB", "#1F8A5B", "#7A5AE0", "#B07F24"]}
           onChange={(v) => setTweak("accent", v)} />
 
-        <TweakSection label="Agent view" />
+        <TweakSection label="Agent view (offline / fallback)" />
         <TweakRadio label="Stance" value={tw.stance} options={["Bullish", "Neutral", "Bearish"]}
           onChange={(v) => setTweak("stance", v)} />
         <TweakSlider label="Conviction" value={tw.conviction} min={0} max={100} step={1} unit="%"
@@ -501,7 +548,7 @@ export default function Terminal({ onReplayIntro }: Props) {
         <TweakSlider label="12-mo target" value={tw.target} min={5000} max={7000} step={50} unit=" $/oz"
           onChange={(v) => setTweak("target", v)} />
 
-        <TweakSection label="Next move" />
+        <TweakSection label="Next move (offline / fallback)" />
         <TweakSlider label="Buy on dip below" value={tw.dipLevel} min={4800} max={5400} step={25} unit=" $"
           onChange={(v) => setTweak("dipLevel", v)} />
         <TweakSlider label="Add size" value={tw.addSize} min={5} max={50} step={5} unit="%"
@@ -510,16 +557,16 @@ export default function Terminal({ onReplayIntro }: Props) {
 
       {briefOpen && (
         <BriefModal T={T} onClose={() => setBriefOpen(false)} brief={{
-          date: "Jun 7, 2026",
+          date: now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
           stance: st.label,
-          conviction: tw.conviction,
-          last: fmt2(livePx),
+          conviction,
+          last: fmt2(displayPx),
           target: fmt(target),
-          nextMove: `Add +${tw.addSize}% on a dip < $${fmt(dipLevel)} (Jun 10)`,
+          nextMove: `Add +${addSize}% on a dip < $${fmt(dipLevel)}${nextCat ? ` (${mFmt(nextCat.date)} ${dDay(nextCat.date)})` : ""}`,
           buyZone: `$${fmt(buyZone[0])} – $${fmt(buyZone[1])}`,
           invalid: `< $${fmt(invalid)}`,
           rr: `${rr} : 1`,
-          line: thesis.line,
+          line: thesisLineText,
         }} />
       )}
     </div>

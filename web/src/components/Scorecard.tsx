@@ -1,10 +1,11 @@
 import type { Theme } from "../theme";
+import type { TrackRecord } from "../data";
 import { TRACK } from "../data";
 import { Gauge } from "./Icons";
 
-interface Props { T: Theme & { accent: string }; }
+interface Props { T: Theme & { accent: string }; track?: TrackRecord; }
 
-export default function Scorecard({ T }: Props) {
+export default function Scorecard({ T, track = TRACK }: Props) {
   const tile = (label: string, value: string, color: string, sub?: string) => (
     <div style={{ borderLeft: `2px solid ${color}`, paddingLeft: 13 }}>
       <div style={{ fontFamily: "'JetBrains Mono',monospace", fontVariantNumeric: "tabular-nums", fontSize: 10, color: T.faint, letterSpacing: 0.6, textTransform: "uppercase" as const }}>{label}</div>
@@ -20,10 +21,10 @@ export default function Scorecard({ T }: Props) {
         <span style={{ fontSize: 11, color: T.faint }}>· live, since Jan 2026 · the wins and the misses</span>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 18 }}>
-        {tile("Hit rate",      TRACK.hit + "%",   T.up,   TRACK.trades + " trades")}
-        {tile("Avg realised",  TRACK.avgR + "R",  T.up,   "per closed trade")}
-        {tile("Best call",     TRACK.best.r,      T.up,   TRACK.best.label)}
-        {tile("Worst call",    TRACK.worst.r,     T.down, TRACK.worst.label)}
+        {tile("Hit rate",      track.hit + "%",   T.up,   track.trades + " trades")}
+        {tile("Avg realised",  track.avgR + "R",  T.up,   "per closed trade")}
+        {tile("Best call",     track.best.r,      T.up,   track.best.label)}
+        {tile("Worst call",    track.worst.r,     T.down, track.worst.label)}
       </div>
     </div>
   );

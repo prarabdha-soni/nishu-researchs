@@ -6,6 +6,9 @@
     "module": "esnext",
     "types": ["vite/client"],
     "skipLibCheck": true,
+    "paths": {
+      "@nishu/shared": ["./src/types.ts"]
+    },
 
     /* Bundler mode */
     "moduleResolution": "bundler",

@@ -1,0 +1,41 @@
+# Render Blueprint — Python FastAPI agent + weekday learning cron (free tier).
+# Dashboard: New → Blueprint → point at this repo.
+services:
+  - type: web
+    name: nishu-agent-api
+    runtime: python
+    plan: free
+    rootDir: .
+    buildCommand: pip install -r api/requirements.txt
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    autoDeploy: false
+    envVars:
+      - key: GOLD_SYMBOL
+        value: GC=F
+      - key: DXY_SYMBOL
+        value: DX-Y.NYB
+      - key: TNX_SYMBOL
+        value: ^TNX
+      - key: HISTORY_DAYS
+        value: "400"
+      - key: SNAPSHOT_TTL_S
+        value: "60"
+      # Render free disk is ephemeral; /tmp is writable.
+      # Set STATE_FILE to a persistent path + Postgres adapter for durable learning.
+      - key: STATE_FILE
+        value: /tmp/agent-state.json
+      - key: WEB_ORIGIN
+        value: "*"
+
+  - type: cron
+    name: nishu-learning-cycle
+    runtime: python
+    plan: free
+    rootDir: .
+    schedule: "5 13 * * 1-5"  # 13:05 UTC weekdays — after 08:30 ET data releases
+    buildCommand: pip install -r api/requirements.txt
+    command: python -c "from api.runtime import auto_resolve_due; r=auto_resolve_due(); print(r)"
+    envVars:
+      - key: STATE_FILE
+        value: /tmp/agent-state.json
