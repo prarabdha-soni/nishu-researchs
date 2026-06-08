@@ -3,6 +3,7 @@ import { T as BASE_T } from "../theme";
 import {
   priceSeries, events, catalysts, thesis,
   DRIVER, STANCE, mFmt, dDay, fmt, fmt2, daysUntil, daysUntilFrom,
+  type BookSlice, type RiskRail,
 } from "../data";
 import { useAgent } from "../api/useAgent";
 import { ICON_MAP, Target, Calendar, News, Loop, Plus, Scissors, Clock } from "./Icons";
@@ -107,7 +108,7 @@ export default function Terminal({ onReplayIntro }: Props) {
     { k: "Core long", w: 55, key: "up" },
     { k: "Tactical dry powder", w: 35, key: "gold" },
     { k: "Tail hedge", w: 10, key: "faint" },
-  ]).map((b) => ({ k: b.k, w: b.w, c: T[b.key as keyof typeof T] as string }));
+  ]).map((b: BookSlice) => ({ k: b.k, w: b.w, c: T[b.key as keyof typeof T] as string }));
 
   const playbook = live ? live.playbook : [
     { id: "t1", primary: true, act: "ADD",  kind: "buy",  size: `+${tw.addSize}%`,
@@ -131,7 +132,7 @@ export default function Terminal({ onReplayIntro }: Props) {
     { k: "Trim zone",     v: `$${fmt(trimZone)}`,  note: "take 10% off",    tone: "sub" },
     { k: "12-mo target",  v: `$${fmt(target)}`,    note: `+${upside}% upside`, tone: "up" },
     { k: "Reward : risk", v: `${rr} : 1`,          note: "on the dip-add",  tone: "up" },
-  ]).map((r) => ({ k: r.k, v: r.v, note: r.note, tone: T[r.tone as keyof typeof T] as string }));
+  ]).map((r: RiskRail) => ({ k: r.k, v: r.v, note: r.note, tone: T[r.tone as keyof typeof T] as string }));
 
   const sel = evs.find((e) => e.id === selId) ?? evs[0] ?? null;
   const dr = sel ? DRIVER[sel.driver] : null;
