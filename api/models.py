@@ -116,6 +116,7 @@ class MarketSnapshot(BaseModel):
     drawdownPct: float
     dxy: Optional[QuoteLite] = None
     yield10y: Optional[QuoteLite] = None
+    usd_inr: Optional[float] = None
     stale: Optional[bool] = None
 
 

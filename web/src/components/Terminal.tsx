@@ -64,6 +64,10 @@ export default function Terminal({ onReplayIntro }: Props) {
   const displayPx = livePrice?.price ?? snapshot?.market.price ?? last;
   const dayChgNum = livePrice?.changePct1d ?? snapshot?.market.changePct1d ?? (prev ? ((last - prev) / prev) * 100 : 0);
   const dayChg = dayChgNum.toFixed(2);
+  const SEED_USD_INR = 85.5; // fallback rate when live data unavailable
+  const usdInr = livePrice?.usd_inr ?? snapshot?.market.usd_inr ?? SEED_USD_INR;
+  // Indian gold is quoted per 10g; 1 troy oz = 31.1035g → divide by 3.11035
+  const displayPxInr = livePrice?.priceInr ?? Math.round(displayPx * usdInr / 3.11035);
 
   // Month ticks derived from whatever series is in play (live or seed).
   const ticks = (() => {
@@ -235,7 +239,11 @@ export default function Terminal({ onReplayIntro }: Props) {
                   ${fmt2(displayPx)}
                 </span>
               </div>
-              <div className="au-mono" style={{ fontSize: 12.5, marginTop: 5 }}>
+              <div className="au-mono" style={{ fontSize: 14, fontWeight: 700, color: T.gold, marginTop: 3, textAlign: "right" }}>
+                ₹{displayPxInr.toLocaleString("en-IN")}
+                <span style={{ fontSize: 10.5, color: T.faint, fontWeight: 400, marginLeft: 4 }}>/ 10g</span>
+              </div>
+              <div className="au-mono" style={{ fontSize: 12.5, marginTop: 4 }}>
                 <span style={{ color: Number(dayChg) >= 0 ? T.up : T.down }}>{Number(dayChg) >= 0 ? "+" : ""}{dayChg}% 1d</span>
                 <span style={{ color: T.faint }}>{"  ·  "}</span>
                 <span style={{ color: T.faint }}>{source === "live" ? `live · ${ago}s ago` : "sample data"}</span>

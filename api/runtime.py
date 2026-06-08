@@ -137,12 +137,15 @@ def get_snapshot(force: bool = False) -> AgentSnapshot:
 
 
 def get_live_price() -> dict:
-    snap = get_snapshot()
+    snap    = get_snapshot()
+    usd_inr = snap.market.usd_inr
     return {
-        "price": snap.market.price,
+        "price":       snap.market.price,
         "changePct1d": snap.market.changePct1d,
-        "asOf": snap.market.asOf,
-        "source": snap.source,
+        "asOf":        snap.market.asOf,
+        "source":      snap.source,
+        "usd_inr":     usd_inr,
+        "priceInr":    round(snap.market.price * usd_inr / 3.11035, 0) if usd_inr else None,
     }
 
 

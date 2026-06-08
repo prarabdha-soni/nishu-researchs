@@ -42,7 +42,7 @@ export interface MarketSnapshot {
   changePct1d: number; high52: number; low52: number;
   dailyVolPct: number; annVolPct: number;
   ma50: number; ma200: number; momentumPct: number; drawdownPct: number;
-  dxy?: QuoteLite; yield10y?: QuoteLite; stale?: boolean;
+  dxy?: QuoteLite; yield10y?: QuoteLite; usd_inr?: number; stale?: boolean;
 }
 
 export interface Decision {

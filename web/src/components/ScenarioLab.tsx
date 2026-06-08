@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import type { Theme } from "../theme";
 import type { Scenario } from "../data";
 import { SCN } from "../data";
@@ -20,10 +20,14 @@ function ActChip({ T, kind, act }: { T: Theme & { accent: string }; kind: string
   );
 }
 
+const buildSel = (scenarios: Scenario[]) =>
+  Object.fromEntries(scenarios.map((s) => [s.id, s.def ?? 0]));
+
 export default function ScenarioLab({ T, scenarios = SCN }: Props) {
-  const [sel, setSel] = useState<Record<string, number>>(() =>
-    Object.fromEntries(scenarios.map((s) => [s.id, s.def]))
-  );
+  const [sel, setSel] = useState<Record<string, number>>(() => buildSel(scenarios));
+
+  // Re-sync when live scenarios arrive with new IDs
+  useEffect(() => { setSel(buildSel(scenarios)); }, [scenarios]);
 
   return (
     <div className="au-card au-fade d5" style={{ padding: 20 }}>
@@ -36,7 +40,8 @@ export default function ScenarioLab({ T, scenarios = SCN }: Props) {
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {scenarios.map((s) => {
-          const cur = s.opts[sel[s.id]];
+          const cur = s.opts[sel[s.id] ?? s.def ?? 0] ?? s.opts[0];
+          if (!cur) return null;
           const moveColor = cur.kind === "trim" ? T.down : cur.kind === "wait" ? T.sub : T.up;
           return (
             <div key={s.id}>

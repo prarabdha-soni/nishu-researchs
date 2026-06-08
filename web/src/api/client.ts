@@ -8,6 +8,8 @@ export interface LivePrice {
   changePct1d: number;
   asOf: string;
   source: "live" | "seed";
+  usd_inr?: number;
+  priceInr?: number;
 }
 
 export async function fetchSnapshot(signal?: AbortSignal): Promise<AgentSnapshot> {
