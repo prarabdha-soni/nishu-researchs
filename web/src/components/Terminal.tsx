@@ -158,7 +158,7 @@ export default function Terminal({ onReplayIntro }: Props) {
   .au-root{font-family:'Hanken Grotesk',system-ui,sans-serif;color:${T.text};background:${T.bg};
     background-image:radial-gradient(900px 520px at 80% -10%, ${T.glowB}, transparent 60%),
                      radial-gradient(720px 480px at -6% 8%, ${T.glowA}, transparent 55%);
-    min-height:100vh;padding:26px clamp(16px,4vw,40px) 36px;}
+    min-height:100vh;padding:26px clamp(14px,4vw,40px) 36px;}
   .au-mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;}
   .au-disp{font-family:'Newsreader',Georgia,serif;font-weight:500;letter-spacing:.1px;}
   .au-card{background:${T.panel};border:1px solid ${T.line};border-radius:16px;box-shadow:${T.cardShadow};}
@@ -168,7 +168,7 @@ export default function Terminal({ onReplayIntro }: Props) {
   .au-hero{display:grid;grid-template-columns:1.45fr 1fr;gap:18px;}
   @media(max-width:900px){.au-lower,.au-lower2,.au-hero{grid-template-columns:1fr;}}
   .au-pill{font-size:12.5px;padding:7px 13px;border-radius:999px;border:1px solid ${T.line2};
-    color:${T.sub};cursor:default;display:flex;align-items:center;gap:7px;transition:.2s;background:transparent;}
+    color:${T.sub};cursor:default;display:flex;align-items:center;gap:7px;transition:.2s;background:transparent;white-space:nowrap;}
   .au-pill.on{color:#fff;background:${T.accent};border-color:${T.accent};font-weight:600;}
   .au-chip{cursor:pointer;border:1px solid ${T.line};background:${T.panel2};border-radius:12px;
     padding:10px 12px;transition:.18s;min-width:0;}
@@ -196,10 +196,44 @@ export default function Terminal({ onReplayIntro }: Props) {
   @keyframes auReason{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
   .au-live{animation:auLive 2.4s ease-in-out infinite;}
   @keyframes auLive{0%,100%{opacity:1;box-shadow:0 0 0 0 ${T.up}66;}50%{opacity:.65;box-shadow:0 0 0 4px ${T.up}00;}}
-  @media(max-width:560px){
-    .au-root{padding:18px 14px 28px;}
-    .au-hero{gap:14px;}
-    .au-lower,.au-lower2{gap:14px;}
+
+  /* ── Alert dates strip ──────────────────────────────────────── */
+  .au-alert-strip{display:flex;gap:10px;overflow-x:auto;padding:2px 1px 8px;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin-bottom:4px;}
+  .au-alert-strip::-webkit-scrollbar{display:none;}
+
+  /* ── Header layout ─────────────────────────────────────────── */
+  .au-hdr{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end;justify-content:space-between;margin-bottom:18px;}
+  .au-hdr-l{display:flex;align-items:center;gap:12px;}
+  .au-hdr-m{display:flex;gap:8px;flex-wrap:wrap;}
+  .au-hdr-r{display:flex;align-items:flex-end;gap:14px;}
+
+  /* ── Mobile ≤ 700px: 2-col header, scrollable pills ───────── */
+  @media(max-width:700px){
+    .au-hdr{display:grid;grid-template-columns:1fr auto;grid-template-rows:auto auto;gap:10px 0;}
+    .au-hdr-l{grid-column:1;grid-row:1;align-self:center;}
+    .au-hdr-r{grid-column:2;grid-row:1;flex-direction:column;align-items:flex-end;gap:3px;}
+    .au-hdr-m{grid-column:1/-1;grid-row:2;overflow-x:auto;flex-wrap:nowrap;padding-bottom:3px;
+      -webkit-overflow-scrolling:touch;scrollbar-width:none;}
+    .au-hdr-m::-webkit-scrollbar{display:none;}
+    .au-pill{font-size:11.5px;padding:6px 11px;}
+    .au-lower2{margin-top:0;}
+  }
+
+  /* ── Mobile ≤ 480px: tighter padding, smaller cards ──────── */
+  @media(max-width:480px){
+    .au-root{padding:14px 12px 24px;}
+    .au-card{border-radius:13px;}
+    .au-lower,.au-lower2{gap:12px;margin-top:12px;}
+    .au-hero{gap:12px;}
+    .au-row{padding:11px 12px;}
+    .au-chip{padding:8px 10px;}
+    .au-kicker{font-size:10px;letter-spacing:1.2px;}
+  }
+
+  /* ── Very small ≤ 380px ──────────────────────────────────── */
+  @media(max-width:380px){
+    .au-hdr-l .au-kicker{display:none;}
+    .au-tgl{padding:6px 10px;font-size:11px;}
   }
   `;
 
@@ -209,13 +243,14 @@ export default function Terminal({ onReplayIntro }: Props) {
       <div className="au-maxw">
 
         {/* Header */}
-        <div className="au-fade d1" style={{ display: "flex", flexWrap: "wrap", gap: 16, alignItems: "flex-end", justifyContent: "space-between", marginBottom: 18 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 38, height: 38, borderRadius: 11, background: `linear-gradient(140deg, ${T.goldLite}, ${T.gold} 55%, #7c561a)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#231703", fontWeight: 600, fontFamily: "'Newsreader',serif", fontSize: 17, boxShadow: "0 4px 12px rgba(150,105,25,0.3)" }}>
+        <div className="au-hdr au-fade d1">
+          {/* Brand */}
+          <div className="au-hdr-l">
+            <div style={{ width: 38, height: 38, flexShrink: 0, borderRadius: 11, background: `linear-gradient(140deg, ${T.goldLite}, ${T.gold} 55%, #7c561a)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#231703", fontWeight: 600, fontFamily: "'Newsreader',serif", fontSize: 17, boxShadow: "0 4px 12px rgba(150,105,25,0.3)" }}>
               nr
             </div>
             <div>
-              <div style={{ fontFamily: "'Newsreader',Georgia,serif", fontWeight: 500, letterSpacing: ".1px", fontSize: 23, lineHeight: 1, display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ fontFamily: "'Newsreader',Georgia,serif", fontWeight: 500, letterSpacing: ".1px", fontSize: 21, lineHeight: 1, display: "flex", alignItems: "center", gap: 8 }}>
                 Nishu Research
                 <span style={{ fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 9.5, fontWeight: 700, letterSpacing: 1, color: T.accent, border: `1px solid ${T.accent}`, borderRadius: 5, padding: "2px 6px", whiteSpace: "nowrap" }}>AI</span>
               </div>
@@ -226,28 +261,32 @@ export default function Terminal({ onReplayIntro }: Props) {
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {/* Pills — scrollable on mobile */}
+          <div className="au-hdr-m">
             <div className="au-pill on"><span className="au-mono">Au</span> Gold</div>
             <div className="au-pill"><span className="au-mono">Ag</span> Silver <span style={{ fontSize: 9.5, color: T.faint }}>soon</span></div>
             <div className="au-pill"><span className="au-mono">Cu</span> Copper <span style={{ fontSize: 9.5, color: T.faint }}>soon</span></div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "flex-end", gap: 14 }}>
+          {/* Price + Brief */}
+          <div className="au-hdr-r">
             <div style={{ textAlign: "right" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
-                <span style={{ width: 7, height: 7, borderRadius: 99, background: source === "live" ? T.up : T.faint }} className={source === "live" ? "au-live" : undefined} />
-                <span className="au-mono" style={{ fontSize: 30, fontWeight: 600, color: T.goldText, lineHeight: 1 }}>
+                <span style={{ width: 7, height: 7, borderRadius: 99, background: source === "live" ? T.up : T.faint, flexShrink: 0 }} className={source === "live" ? "au-live" : undefined} />
+                <span className="au-mono" style={{ fontSize: "clamp(22px,5vw,30px)", fontWeight: 600, color: T.goldText, lineHeight: 1 }}>
                   ${fmt2(displayPx)}
                 </span>
               </div>
-              <div className="au-mono" style={{ fontSize: 14, fontWeight: 700, color: T.gold, marginTop: 3, textAlign: "right" }}>
+              <div className="au-mono" style={{ fontSize: 13, fontWeight: 700, color: T.gold, marginTop: 3, textAlign: "right" }}>
                 ₹{displayPxInr.toLocaleString("en-IN")}
-                <span style={{ fontSize: 10.5, color: T.faint, fontWeight: 400, marginLeft: 4 }}>/ 10g</span>
+                <span style={{ fontSize: 10, color: T.faint, fontWeight: 400, marginLeft: 4 }}>/ 10g</span>
               </div>
-              <div className="au-mono" style={{ fontSize: 12.5, marginTop: 4 }}>
-                <span style={{ color: Number(dayChg) >= 0 ? T.up : T.down }}>{Number(dayChg) >= 0 ? "+" : ""}{dayChg}% 1d</span>
-                <span style={{ color: T.faint }}>{"  ·  "}</span>
-                <span style={{ color: T.faint }}>{source === "live" ? `live · ${ago}s ago` : "sample data"}</span>
+              <div className="au-mono" style={{ fontSize: 11.5, marginTop: 3, display: "flex", gap: 4, justifyContent: "flex-end", flexWrap: "wrap" }}>
+                <span style={{ color: Number(dayChg) >= 0 ? T.up : T.down }}>{Number(dayChg) >= 0 ? "+" : ""}{dayChg}%</span>
+                <span style={{ color: T.faint }}>·</span>
+                <span style={{ color: source === "live" ? T.upText : T.accent }}>
+                  {source === "live" ? `Yahoo Finance · ${ago}s ago` : "⚡ connecting…"}
+                </span>
               </div>
             </div>
             <button className="au-tgl au-cta" onClick={() => setBriefOpen(true)}>
@@ -258,6 +297,45 @@ export default function Terminal({ onReplayIntro }: Props) {
 
         {/* Live reasoning */}
         <ReasoningStream T={T} />
+
+        {/* Alert dates strip */}
+        {cats.length > 0 && (
+          <div className="au-fade d2 au-alert-strip">
+            {cats.slice(0, 5).map((c, i) => {
+              const dys = dUntil(c.date);
+              const col = dc(c.tag);
+              const urgent = dys <= 3;
+              const soon   = dys <= 10;
+              return (
+                <div key={c.id ?? c.date} style={{
+                  flexShrink: 0, display: "flex", alignItems: "center", gap: 9,
+                  border: `1px solid ${urgent ? T.down + "88" : soon ? T.gold + "88" : T.line2}`,
+                  background: urgent ? T.down + "10" : soon ? T.gold + "0d" : T.panel2,
+                  borderRadius: 12, padding: "9px 13px",
+                }}>
+                  <div style={{ textAlign: "center", minWidth: 36 }}>
+                    <div style={{ fontSize: 9, letterSpacing: 1.2, fontWeight: 700, color: col, textTransform: "uppercase", fontFamily: "'JetBrains Mono',monospace" }}>
+                      {new Date(c.date + "T00:00:00").toLocaleDateString("en-IN", { month: "short" })}
+                    </div>
+                    <div style={{ fontFamily: "'Newsreader',Georgia,serif", fontSize: 22, fontWeight: 500, lineHeight: 1, color: urgent ? T.down : soon ? T.goldText : T.text }}>
+                      {new Date(c.date + "T00:00:00").getDate()}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: "nowrap", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }}>{c.label}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: 99, background: col, flexShrink: 0 }} />
+                      <span className="au-mono" style={{ fontSize: 10.5, color: urgent ? T.down : soon ? T.goldText : T.faint, fontWeight: urgent || soon ? 700 : 400 }}>
+                        {dys === 0 ? "TODAY" : dys === 1 ? "TOMORROW" : `in ${dys} days`}
+                      </span>
+                      {i === 0 && <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.5, color: "#fff", background: T.accent, borderRadius: 5, padding: "1px 6px" }}>NEXT</span>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Hero */}
         <div className="au-card au-fade d2 au-hero" style={{ padding: 22 }}>
@@ -462,10 +540,10 @@ export default function Terminal({ onReplayIntro }: Props) {
             <div className="au-kicker" style={{ marginTop: 20, marginBottom: 10 }}>Scale-in ladder · dry powder staged</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {ladder.map((r, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, border: `1px solid ${i === 0 ? T.up + "66" : T.line}`, background: i === 0 ? T.upBg : "transparent", borderRadius: 11, padding: "11px 13px" }}>
-                  <span className="au-mono" style={{ fontSize: 15, fontWeight: 600, color: T.goldText, minWidth: 60 }}>${fmt(r.px)}</span>
-                  <div style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: T.sub }}>{r.tag}</div>
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontWeight: 700, fontSize: 12.5, color: T.up, background: T.up + "1f", border: `1px solid ${T.up}55`, borderRadius: 8, padding: "4px 9px" }}>
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, border: `1px solid ${i === 0 ? T.up + "66" : T.line}`, background: i === 0 ? T.upBg : "transparent", borderRadius: 11, padding: "11px 13px", flexWrap: "wrap" }}>
+                  <span className="au-mono" style={{ fontSize: 14, fontWeight: 600, color: T.goldText, minWidth: 56, flexShrink: 0 }}>${fmt(r.px)}</span>
+                  <div style={{ flex: 1, minWidth: 100, fontSize: 12, color: T.sub }}>{r.tag}</div>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontWeight: 700, fontSize: 12, color: T.up, background: T.up + "1f", border: `1px solid ${T.up}55`, borderRadius: 8, padding: "4px 9px", flexShrink: 0 }}>
                     <Plus size={13} /> +{r.size}%
                   </span>
                 </div>
@@ -482,10 +560,10 @@ export default function Terminal({ onReplayIntro }: Props) {
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {playbook.map((p) => (
                 <div key={p.id} className="au-row" style={p.primary ? { borderColor: T.up + "66", background: T.upBg } : {}}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                      <span className="au-mono" style={{ fontSize: 10.5, color: T.faint, fontWeight: 600 }}>IF</span>
-                      <span style={{ fontSize: 13, fontWeight: 600 }}>{p.when}</span>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 8, minWidth: 0, flex: 1 }}>
+                      <span className="au-mono" style={{ fontSize: 10.5, color: T.faint, fontWeight: 600, marginTop: 2, flexShrink: 0 }}>IF</span>
+                      <span style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.4 }}>{p.when}</span>
                     </div>
                     {actChip(p.kind, p.act, p.size)}
                   </div>

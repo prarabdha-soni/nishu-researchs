@@ -95,6 +95,21 @@ const css = `
   .nw-r2{animation:nwPulse 2.6s ease-out infinite 1.3s;}
   .nw-word{animation:nwWordIn .45s cubic-bezier(.2,.7,.2,1);}
 }
+@media(max-width:600px){
+  .nw-wrap{padding:24px 16px;}
+  .nw-stage{height:240px;}
+  .nw-chippos:nth-child(n+6){display:none;}
+  .nw-chip{font-size:11.5px;padding:6px 11px;}
+  .nw-core-in{width:92px;height:92px;}
+  .nw-word{font-size:16px;}
+  .nw-enter{padding:11px 22px;font-size:13px;}
+  .nw-prog{max-width:100%;}
+}
+@media(max-width:400px){
+  .nw-stage{height:190px;}
+  .nw-chippos:nth-child(n+4){display:none;}
+  .nw-h1{margin:12px 0 0;}
+}
 `;
 
 interface Props {
@@ -117,7 +132,7 @@ export default function Welcome({ onEnter }: Props) {
       const e = Math.min(1, (now - start) / dur);
       setProg(Math.round(e * 100));
       if (e < 1) raf = requestAnimationFrame(tick);
-      else { setDone(true); setTimeout(() => { setLeaving(true); setTimeout(onEnter, 440); }, 1300); }
+      else { setDone(true); }
     };
     raf = requestAnimationFrame(tick);
     return () => { stop = true; cancelAnimationFrame(raf); };
