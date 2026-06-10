@@ -17,10 +17,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
 from contextlib import contextmanager
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "sqlite:///api/data/nishu.db",
-)
+DATABASE_URL = os.getenv("DATABASE_URL") or "sqlite:///api/data/nishu.db"
 
 _connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 engine = create_engine(DATABASE_URL, connect_args=_connect_args, echo=False)

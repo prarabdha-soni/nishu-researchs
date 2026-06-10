@@ -3,6 +3,8 @@
 from __future__ import annotations
 import os
 from datetime import datetime, timezone
+from dotenv import load_dotenv
+load_dotenv()
 from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
