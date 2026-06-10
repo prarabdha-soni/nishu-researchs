@@ -89,7 +89,7 @@ const invalid = live ? live.invalidation : 3900;
   .au-root{font-family:'Hanken Grotesk',system-ui,sans-serif;color:${T.text};background:${T.bg};
     background-image:radial-gradient(900px 520px at 80% -10%, ${T.glowB}, transparent 60%),
                      radial-gradient(720px 480px at -6% 8%, ${T.glowA}, transparent 55%);
-    min-height:100vh;padding:26px clamp(14px,4vw,40px) 36px;}
+    min-height:100vh;padding:26px clamp(14px,4vw,40px) 36px;overflow-x:hidden;}
   .au-mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;}
   .au-disp{font-family:'Newsreader',Georgia,serif;font-weight:500;letter-spacing:.1px;}
   .au-card{background:${T.panel};border:1px solid ${T.line};border-radius:16px;box-shadow:${T.cardShadow};}
@@ -99,8 +99,16 @@ const invalid = live ? live.invalidation : 3900;
   .au-hero{display:grid;grid-template-columns:1.45fr 1fr;gap:18px;}
   .au-rules{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:22px;}
   .au-foot{display:flex;gap:14px;margin-top:14px;flex-wrap:wrap;}
+  .au-verdict{padding:26px 28px;}
+  .au-chartcard{padding:18px 18px 10px;margin-top:16px;}
   @media(max-width:900px){.au-lower,.au-lower2,.au-hero{grid-template-columns:1fr;}}
   @media(max-width:680px){.au-rules{grid-template-columns:1fr;}}
+  @media(max-width:560px){
+    .au-verdict{padding:18px 16px;}
+    .au-chartcard{padding:14px 12px 8px;}
+    .au-stance{font-size:25px!important;}
+    .au-rule-v{font-size:18px!important;}
+  }
   .au-pill{font-size:12.5px;padding:7px 13px;border-radius:999px;border:1px solid ${T.line2};
     color:${T.sub};cursor:default;display:flex;align-items:center;gap:7px;transition:.2s;background:transparent;white-space:nowrap;}
   .au-pill.on{color:#fff;background:${T.accent};border-color:${T.accent};font-weight:600;}
@@ -230,12 +238,12 @@ const invalid = live ? live.invalidation : 3900;
         </div>
 
         {/* Verdict — one simple card */}
-        <div className="au-card au-fade d2" style={{ padding: "26px 28px" }}>
+        <div className="au-card au-fade d2 au-verdict">
 
           {/* The call */}
           <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             <span style={{ width: 12, height: 12, borderRadius: 99, background: stCol, boxShadow: `0 0 0 4px ${stCol}26` }} />
-            <span style={{ fontFamily: "'Newsreader',Georgia,serif", fontWeight: 500, fontSize: 30, lineHeight: 1, color: stTxt }}>{st.label}</span>
+            <span className="au-stance" style={{ fontFamily: "'Newsreader',Georgia,serif", fontWeight: 500, fontSize: 30, lineHeight: 1, color: stTxt }}>{st.label}</span>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 700, fontSize: 12,
               color: T.up, background: T.up + "1f", border: `1px solid ${T.up}55`, borderRadius: 8, padding: "5px 11px" }}>
               <Plus size={12} /> Buy the dip
@@ -251,7 +259,7 @@ const invalid = live ? live.invalidation : 3900;
           <div className="au-rules">
             <div style={{ border: `1px solid ${T.up}44`, borderRadius: 14, padding: "16px 18px", background: T.panel2 }}>
               <span className="au-kicker" style={{ color: T.upText }}>1 · When to buy</span>
-              <div style={{ fontSize: 20, fontWeight: 700, marginTop: 8, color: T.text }}>
+              <div className="au-rule-v" style={{ fontSize: 20, fontWeight: 700, marginTop: 8, color: T.text }}>
                 Price below <span className="au-mono" style={{ color: T.upText }}>${fmt(dipLevel)}</span>
               </div>
               <div style={{ fontSize: 13, color: T.sub, marginTop: 6, lineHeight: 1.55 }}>
@@ -261,7 +269,7 @@ const invalid = live ? live.invalidation : 3900;
 
             <div style={{ border: `1px solid ${T.accent}44`, borderRadius: 14, padding: "16px 18px", background: T.panel2 }}>
               <span className="au-kicker" style={{ color: T.accent }}>2 · When to keep holding</span>
-              <div style={{ fontSize: 20, fontWeight: 700, marginTop: 8, color: T.text }}>
+              <div className="au-rule-v" style={{ fontSize: 20, fontWeight: 700, marginTop: 8, color: T.text }}>
                 CPI inflation above <span className="au-mono" style={{ color: T.accent }}>4%</span>
               </div>
               <div style={{ fontSize: 13, color: T.sub, marginTop: 6, lineHeight: 1.55 }}>
@@ -301,7 +309,7 @@ const invalid = live ? live.invalidation : 3900;
         </div>
 
         {/* Chart */}
-        <div className="au-card au-fade d3" style={{ padding: "18px 18px 10px", marginTop: 16 }}>
+        <div className="au-card au-fade d3 au-chartcard">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 10, marginBottom: 6 }}>
             <div>
               <div style={{ fontFamily: "'Newsreader',Georgia,serif", fontWeight: 500, letterSpacing: ".1px", fontSize: 18 }}>

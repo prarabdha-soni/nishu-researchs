@@ -24,10 +24,10 @@ export default function GoldChart({ data, events, selId, onSelect, T, driverColo
     const el = wrapRef.current;
     if (!el) return;
     const ro = new ResizeObserver((entries) => {
-      for (const e of entries) setW(Math.max(320, Math.round(e.contentRect.width)));
+      for (const e of entries) setW(Math.max(260, Math.round(e.contentRect.width)));
     });
     ro.observe(el);
-    setW(Math.max(320, Math.round(el.clientWidth)));
+    setW(Math.max(260, Math.round(el.clientWidth)));
     return () => ro.disconnect();
   }, []);
 
@@ -96,16 +96,25 @@ export default function GoldChart({ data, events, selId, onSelect, T, driverColo
           </text>
         </g>
 
-        {monthTicks.map((dt) => {
-          const i = idxByDate(dt);
-          if (i < 0) return null;
-          return (
-            <text key={dt} x={X(i)} y={H - 8} textAnchor="middle" fontSize="10.5"
-              fontFamily="'JetBrains Mono',monospace" fill={T.faint}>
-              {mFmt(dt)}
-            </text>
-          );
-        })}
+        {(() => {
+          // Thin month labels so they never overlap: keep a min pixel gap.
+          // Scales down automatically on narrow / mobile widths.
+          const minGap = 42;
+          let lastX = -Infinity;
+          return monthTicks.map((dt) => {
+            const i = idxByDate(dt);
+            if (i < 0) return null;
+            const x = X(i);
+            if (x - lastX < minGap) return null;
+            lastX = x;
+            return (
+              <text key={dt} x={x} y={H - 8} textAnchor="middle" fontSize="10.5"
+                fontFamily="'JetBrains Mono',monospace" fill={T.faint}>
+                {mFmt(dt)}
+              </text>
+            );
+          });
+        })()}
 
         <path d={areaPath} fill="url(#auGoldFill)" />
         <path d={linePath} fill="none" stroke={T.gold} strokeWidth="2.1" />

@@ -20,9 +20,9 @@ const printCss = `@media print{body *{visibility:hidden!important;}#nw-brief,#nw
 
 function Row({ k, v, c, T }: { k: string; v: string; c?: string; T: Theme & { accent: string } }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "9px 0", borderBottom: `1px solid ${T.line}` }}>
-      <span style={{ fontSize: 12.5, color: T.sub }}>{k}</span>
-      <span style={{ fontFamily: "'JetBrains Mono',monospace", fontVariantNumeric: "tabular-nums", fontSize: 13.5, fontWeight: 600, color: c || T.text }}>{v}</span>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 14, padding: "9px 0", borderBottom: `1px solid ${T.line}` }}>
+      <span style={{ fontSize: 12.5, color: T.sub, flexShrink: 0 }}>{k}</span>
+      <span style={{ fontFamily: "'JetBrains Mono',monospace", fontVariantNumeric: "tabular-nums", fontSize: 13.5, fontWeight: 600, color: c || T.text, textAlign: "right", minWidth: 0, wordBreak: "break-word" }}>{v}</span>
     </div>
   );
 }
